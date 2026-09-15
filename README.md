@@ -1,12 +1,11 @@
 # Daily Puzzler
 
-A daily puzzle app built with Flutter. The landing page (blue/yellow brand
-look) is the app's home; tapping **WORDLE** opens today's word puzzle, with
-on-device progress tracking (streak, win %, guess distribution) and an
-optional Hard Mode. The structure leaves room to add more daily puzzles
-behind the same landing page later.
+A daily puzzle app built with Flutter. The landing page is the app's 
+home; tapping **WORDLE** opens today's word puzzle, with
+on-device progress tracking and an optional Hard Mode. The structure
+leaves room to add more daily puzzles behind the same landing page later.
 
-## Design decisions (from our setup discussion)
+## Design decisions 
 
 - **Word source**: a bundled local word list (`lib/data/word_list.dart`, 500+
   common 5-letter words) — no backend, works fully offline. The word of the
