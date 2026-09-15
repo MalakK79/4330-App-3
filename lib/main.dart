@@ -26,7 +26,7 @@ class DailyPuzzlerApp extends StatelessWidget {
         darkTheme: ThemeData(
           useMaterial3: true,
           colorSchemeSeed: const Color(0xFF6AAA64),
-          brightness: Brightness.dark,
+          brightness: Brightness.light,
         ),
         themeMode: ThemeMode.system,
         home: const WelcomeScreen(),
