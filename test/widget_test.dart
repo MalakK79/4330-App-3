@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -18,13 +17,15 @@ void main() {
     expect(find.text('WORDLE'), findsOneWidget);
   });
 
-  testWidgets('Tapping Wordle opens the game screen', (tester) async {
+  testWidgets('Tapping Wordle opens the game screen with a streak counter',
+      (tester) async {
     await tester.pumpWidget(const DailyPuzzlerApp());
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('WORDLE'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('WORDLE #'), findsOneWidget);
+    expect(find.text('ENTER'), findsOneWidget);
+    expect(find.text('STREAK 0'), findsOneWidget);
   });
 }

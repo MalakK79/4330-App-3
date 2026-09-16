@@ -2,21 +2,24 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/daily_game_record.dart';
+import '../models/game_record.dart';
 import '../models/game_status.dart';
 import '../models/player_stats.dart';
 
-/// Reads/writes everything that needs to survive an app restart:
-/// aggregate stats (streak, win %, guess distribution), the hard-mode
-/// setting, and today's in-progress puzzle state.
+/// Reads/writes everything that needs to survive an app restart: aggregate
+/// stats (streak, win %, guess distribution), the hard-mode setting, and the
+/// round currently in progress.
 ///
 /// Everything is on-device only (via [SharedPreferences]) — no account or
 /// network sync. That keeps things simple and private, at the cost of not
 /// following the player across devices.
 class ProgressService {
-  static const _kStats = 'wordle.stats.v1';
+  // v2 keys: v1 stored a date-keyed "puzzle of the day" record and stats
+  // with last-played/last-won dates, which no longer apply now that rounds
+  // are drawn at random and replayable. Old v1 values are simply ignored.
+  static const _kStats = 'wordle.stats.v2';
   static const _kHardMode = 'wordle.hardMode.v1';
-  static const _kTodayRecord = 'wordle.todayRecord.v1';
+  static const _kCurrentGame = 'wordle.currentGame.v2';
 
   Future<PlayerStats> loadStats() async {
     final prefs = await SharedPreferences.getInstance();
@@ -34,10 +37,10 @@ class ProgressService {
     await prefs.setString(_kStats, jsonEncode(stats.toJson()));
   }
 
-  /// Applies the result of a just-finished game (win or loss) to the
-  /// aggregate stats, updating streaks and guess distribution.
+  /// Applies the result of a just-finished round to the aggregate stats.
+  ///
+  /// A win extends the streak (and the best streak with it); a loss ends it.
   Future<PlayerStats> recordResult({
-    required String dateKey,
     required bool won,
     required int guessCount,
   }) async {
@@ -48,18 +51,14 @@ class ProgressService {
       newDistribution[guessCount - 1] += 1;
     }
 
+    final newStreak = won ? current.currentStreak + 1 : 0;
+
     final updated = current.copyWith(
       gamesPlayed: current.gamesPlayed + 1,
       gamesWon: current.gamesWon + (won ? 1 : 0),
-      currentStreak: won ? current.currentStreak + 1 : 0,
-      maxStreak: won
-          ? (current.currentStreak + 1 > current.maxStreak
-              ? current.currentStreak + 1
-              : current.maxStreak)
-          : current.maxStreak,
+      currentStreak: newStreak,
+      maxStreak: newStreak > current.maxStreak ? newStreak : current.maxStreak,
       guessDistribution: newDistribution,
-      lastPlayedDate: dateKey,
-      lastWonDate: won ? dateKey : current.lastWonDate,
     );
 
     await saveStats(updated);
@@ -76,36 +75,41 @@ class ProgressService {
     await prefs.setBool(_kHardMode, value);
   }
 
-  Future<DailyGameRecord?> loadTodayRecord(String dateKey) async {
+  /// The unfinished round to resume, or null if there isn't one.
+  Future<GameRecord?> loadCurrentGame() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_kTodayRecord);
+    final raw = prefs.getString(_kCurrentGame);
     if (raw == null) return null;
     try {
       final record =
-          DailyGameRecord.fromJson(jsonDecode(raw) as Map<String, dynamic>);
-      // A record from a previous day is stale — today's puzzle starts fresh.
-      if (record.puzzleDate != dateKey) return null;
+          GameRecord.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      // Finished rounds aren't resumed — the next launch gets a new word.
+      if (record.status != GameStatus.playing) return null;
+      if (record.targetWord.length != 5) return null;
       return record;
     } catch (_) {
       return null;
     }
   }
 
-  Future<void> saveTodayRecord(DailyGameRecord record) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kTodayRecord, jsonEncode(record.toJson()));
-  }
-
-  /// Convenience used by the provider after every guess.
-  Future<void> updateTodayRecord({
-    required String dateKey,
+  Future<void> saveCurrentGame({
+    required String targetWord,
     required List<String> guesses,
     required GameStatus status,
-  }) {
-    return saveTodayRecord(DailyGameRecord(
-      puzzleDate: dateKey,
-      guesses: guesses,
-      status: status,
-    ));
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _kCurrentGame,
+      jsonEncode(GameRecord(
+        targetWord: targetWord,
+        guesses: guesses,
+        status: status,
+      ).toJson()),
+    );
+  }
+
+  Future<void> clearCurrentGame() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kCurrentGame);
   }
 }

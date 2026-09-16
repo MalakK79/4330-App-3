@@ -8,8 +8,8 @@ import '../providers/game_provider.dart';
 /// letter locked to its position, or a yellow letter known to be in the
 /// word) must be reused in every subsequent guess — same as the original
 /// Wordle's hard mode. It can only be toggled before the first guess of a
-/// puzzle is made, exactly like upstream Wordle, so it can't be flipped
-/// mid-solve to dodge a constraint.
+/// round is made, exactly like upstream Wordle, so it can't be flipped
+/// mid-solve to dodge a constraint. Starting a new word unlocks it again.
 class SettingsDialog extends StatelessWidget {
   const SettingsDialog({super.key, required this.provider});
 
@@ -28,7 +28,7 @@ class SettingsDialog extends StatelessWidget {
             title: const Text('Hard Mode'),
             subtitle: Text(
               lockedByProgress
-                  ? 'Locked for the rest of today\'s puzzle'
+                  ? 'Locked until the next word'
                   : 'Revealed hints must be used in later guesses',
             ),
             value: provider.hardMode,

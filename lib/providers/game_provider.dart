@@ -1,39 +1,37 @@
 import 'package:flutter/foundation.dart';
 
-import '../models/daily_game_record.dart';
 import '../models/game_status.dart';
 import '../models/player_stats.dart';
 import '../models/tile_status.dart';
-import '../services/daily_word_service.dart';
 import '../services/guess_evaluator.dart';
 import '../services/progress_service.dart';
+import '../services/random_word_service.dart';
 
-/// Holds and drives all state for "today's" game: the target word, guesses
-/// made so far, on-screen keyboard coloring, win/loss status, hard-mode
-/// enforcement, and the persisted stats. The UI layer only reads this and
-/// calls its input methods (`addLetter`, `removeLetter`, `submitGuess`).
+/// Holds and drives all state for a round of Wordle: the randomly drawn
+/// target word, guesses made so far, on-screen keyboard coloring, win/loss
+/// status, hard-mode enforcement, and the persisted streak/stats.
+///
+/// Rounds are endless — [newGame] draws a fresh word whenever the player
+/// wants one, which is what the post-win and post-loss buttons call. The UI
+/// layer only reads this and calls its input methods (`addLetter`,
+/// `removeLetter`, `submitGuess`, `newGame`).
 class GameProvider extends ChangeNotifier {
   GameProvider({
-    DailyWordService? wordService,
+    RandomWordService? wordService,
     ProgressService? progressService,
-    DateTime Function()? now,
-  })  : _wordService = wordService ?? DailyWordService(),
-        _progressService = progressService ?? ProgressService(),
-        _now = now ?? DateTime.now;
+  })  : _wordService = wordService ?? RandomWordService(),
+        _progressService = progressService ?? ProgressService();
 
   static const int wordLength = 5;
   static const int maxGuesses = 6;
 
-  final DailyWordService _wordService;
+  final RandomWordService _wordService;
   final ProgressService _progressService;
-  final DateTime Function() _now;
 
   bool _isLoading = true;
   bool get isLoading => _isLoading;
 
-  late String _targetWord;
-  late String _dateKey;
-  late int _puzzleNumber;
+  String _targetWord = '';
 
   final List<String> _guesses = [];
   final List<List<TileStatus>> _evaluations = [];
@@ -53,7 +51,6 @@ class GameProvider extends ChangeNotifier {
   final Map<int, String> _requiredPositions = {};
   final Set<String> _requiredLetters = {};
 
-  int get puzzleNumber => _puzzleNumber;
   List<String> get guesses => List.unmodifiable(_guesses);
   List<List<TileStatus>> get evaluations => List.unmodifiable(_evaluations);
   String get currentInput => _currentInput;
@@ -62,29 +59,73 @@ class GameProvider extends ChangeNotifier {
   PlayerStats get stats => _stats;
   String? get errorMessage => _errorMessage;
   Map<String, TileStatus> get keyStatuses => Map.unmodifiable(_keyStatuses);
+
+  /// The answer for the current round. Revealed to the player once the round
+  /// is over — on a loss, that reveal is the whole point.
   String get targetWord => _targetWord;
+
+  /// Words solved in a row — the score counter shown on the game screen.
+  int get currentStreak => _stats.currentStreak;
+  int get bestStreak => _stats.maxStreak;
+
+  /// 1-based number of the round being played, counting every finished round.
+  int get roundNumber => _stats.gamesPlayed + 1;
+
   bool get canEdit => _status == GameStatus.playing;
+  bool get isRoundOver => _status != GameStatus.playing;
   int get remainingGuesses => maxGuesses - _guesses.length;
 
   Future<void> init() async {
-    final today = _now();
-    _dateKey = DailyWordService.dateKey(today);
-    _targetWord = _wordService.wordForDate(today);
-    _puzzleNumber = _wordService.puzzleNumberForDate(today);
-
     _hardMode = await _progressService.getHardMode();
     _stats = await _progressService.loadStats();
 
-    final existing = await _progressService.loadTodayRecord(_dateKey);
-    if (existing != null) {
-      for (final guess in existing.guesses) {
-        _applyGuess(guess, persist: false);
+    // Resume an unfinished round if there is one, so quitting mid-word
+    // doesn't quietly swap the answer out from under the player.
+    final saved = await _progressService.loadCurrentGame();
+    if (saved != null) {
+      _startRound(saved.targetWord);
+      for (final guess in saved.guesses) {
+        await _applyGuess(guess, persist: false);
       }
-      _status = existing.status;
+    } else {
+      _startRound(_wordService.nextWord());
+      await _persistRound();
     }
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  /// Abandons whatever is on the board and deals a brand-new random word.
+  ///
+  /// This backs the "New Word" button shown after a win or a loss. A round
+  /// abandoned while still playable isn't counted as a loss, so it leaves
+  /// the streak alone.
+  Future<void> newGame() async {
+    _startRound(_wordService.nextWord(avoid: _targetWord));
+    notifyListeners();
+    await _persistRound();
+  }
+
+  /// Resets the board for [word], clearing everything from the last round.
+  void _startRound(String word) {
+    _targetWord = word.toUpperCase();
+    _guesses.clear();
+    _evaluations.clear();
+    _keyStatuses.clear();
+    _requiredPositions.clear();
+    _requiredLetters.clear();
+    _currentInput = '';
+    _status = GameStatus.playing;
+    _errorMessage = null;
+  }
+
+  Future<void> _persistRound() {
+    return _progressService.saveCurrentGame(
+      targetWord: _targetWord,
+      guesses: _guesses,
+      status: _status,
+    );
   }
 
   void addLetter(String letter) {
@@ -175,20 +216,18 @@ class GameProvider extends ChangeNotifier {
       _status = GameStatus.lost;
     }
 
-    if (persist) {
-      await _progressService.updateTodayRecord(
-        dateKey: _dateKey,
-        guesses: _guesses,
-        status: _status,
-      );
+    if (!persist) return;
 
-      if (won || lost) {
-        _stats = await _progressService.recordResult(
-          dateKey: _dateKey,
-          won: won,
-          guessCount: _guesses.length,
-        );
-      }
+    if (won || lost) {
+      // The round is over: there's nothing left to resume, and it now counts
+      // toward the streak.
+      await _progressService.clearCurrentGame();
+      _stats = await _progressService.recordResult(
+        won: won,
+        guessCount: _guesses.length,
+      );
+    } else {
+      await _persistRound();
     }
   }
 

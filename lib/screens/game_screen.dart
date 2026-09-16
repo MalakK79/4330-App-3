@@ -6,8 +6,10 @@ import '../models/game_status.dart';
 import '../providers/game_provider.dart';
 import '../widgets/guess_grid.dart';
 import '../widgets/keyboard_widget.dart';
+import '../widgets/round_result_dialog.dart';
 import '../widgets/settings_dialog.dart';
 import '../widgets/stats_dialog.dart';
+import '../widgets/streak_counter.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -19,7 +21,10 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   final FocusNode _focusNode = FocusNode();
   String? _lastShownError;
-  GameStatus? _lastAnnouncedStatus;
+
+  /// The round whose end has already been announced, so the result dialog
+  /// pops exactly once per round instead of on every rebuild.
+  String? _announcedRound;
 
   @override
   void dispose() {
@@ -66,12 +71,14 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _maybeAnnounceResult(GameProvider provider) {
-    if (provider.status == GameStatus.playing) {
-      _lastAnnouncedStatus = null;
+    if (!provider.isRoundOver) {
+      _announcedRound = null;
       return;
     }
-    if (_lastAnnouncedStatus == provider.status) return;
-    _lastAnnouncedStatus = provider.status;
+    // Keyed by the answer so a new round re-arms the announcement even if
+    // two rounds in a row end the same way.
+    if (_announcedRound == provider.targetWord) return;
+    _announcedRound = provider.targetWord;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -80,33 +87,25 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _showResultDialog(GameProvider provider) {
-    final won = provider.status == GameStatus.won;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(won ? 'You got it! 🎉' : 'So close!'),
-        content: Text(
-          won
-              ? 'Solved in ${provider.guesses.length}/${GameProvider.maxGuesses} guesses.'
-              : 'The word was ${provider.targetWord}. Come back tomorrow for a new puzzle!',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              showDialog(
-                context: context,
-                builder: (_) => StatsDialog(stats: provider.stats),
-              );
-            },
-            child: const Text('View Stats'),
-          ),
-        ],
+      builder: (_) => RoundResultDialog(
+        won: provider.status == GameStatus.won,
+        answer: provider.targetWord,
+        guessCount: provider.guesses.length,
+        maxGuesses: GameProvider.maxGuesses,
+        currentStreak: provider.currentStreak,
+        bestStreak: provider.bestStreak,
+        onNewWord: provider.newGame,
+        onViewStats: () => _showStats(provider),
       ),
+    );
+  }
+
+  void _showStats(GameProvider provider) {
+    showDialog(
+      context: context,
+      builder: (_) => StatsDialog(stats: provider.stats),
     );
   }
 
@@ -123,19 +122,16 @@ class _GameScreenState extends State<GameScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'WORDLE #${provider.puzzleNumber}',
-          style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
+        title: const Text(
+          'WORDLE',
+          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
         ),
         centerTitle: true,
         actions: [
           IconButton(
             tooltip: 'Statistics',
             icon: const Icon(Icons.bar_chart_outlined),
-            onPressed: () => showDialog(
-              context: context,
-              builder: (_) => StatsDialog(stats: provider.stats),
-            ),
+            onPressed: () => _showStats(provider),
           ),
           IconButton(
             tooltip: 'Settings',
@@ -146,6 +142,14 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(36),
+          child: StreakCounter(
+            currentStreak: provider.currentStreak,
+            bestStreak: provider.bestStreak,
+            roundNumber: provider.roundNumber,
+          ),
+        ),
       ),
       body: Focus(
         focusNode: _focusNode,
@@ -161,6 +165,12 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                 ),
               ),
+              if (provider.isRoundOver)
+                RoundOverBar(
+                  won: provider.status == GameStatus.won,
+                  answer: provider.targetWord,
+                  onNewWord: provider.newGame,
+                ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                 child: KeyboardWidget(

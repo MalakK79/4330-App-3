@@ -1,4 +1,8 @@
 /// Aggregate player statistics, persisted on-device.
+///
+/// [currentStreak] is the headline number the game screen shows: how many
+/// words have been solved in a row. It grows with every win and resets to
+/// zero the moment a round is lost.
 class PlayerStats {
   PlayerStats({
     this.gamesPlayed = 0,
@@ -6,23 +10,19 @@ class PlayerStats {
     this.currentStreak = 0,
     this.maxStreak = 0,
     List<int>? guessDistribution,
-    this.lastPlayedDate,
-    this.lastWonDate,
   }) : guessDistribution = guessDistribution ?? List<int>.filled(6, 0);
 
   final int gamesPlayed;
   final int gamesWon;
+
+  /// Words solved in a row, without a loss in between.
   final int currentStreak;
+
+  /// The best [currentStreak] ever reached.
   final int maxStreak;
 
   /// Index 0 = number of games won in 1 guess, index 5 = won in 6 guesses.
   final List<int> guessDistribution;
-
-  /// ISO-8601 date string (yyyy-mm-dd) of the last day a game was completed.
-  final String? lastPlayedDate;
-
-  /// ISO-8601 date string (yyyy-mm-dd) of the last day a game was won.
-  final String? lastWonDate;
 
   double get winPercent =>
       gamesPlayed == 0 ? 0 : (gamesWon / gamesPlayed) * 100;
@@ -33,8 +33,6 @@ class PlayerStats {
     int? currentStreak,
     int? maxStreak,
     List<int>? guessDistribution,
-    String? lastPlayedDate,
-    String? lastWonDate,
   }) {
     return PlayerStats(
       gamesPlayed: gamesPlayed ?? this.gamesPlayed,
@@ -42,8 +40,6 @@ class PlayerStats {
       currentStreak: currentStreak ?? this.currentStreak,
       maxStreak: maxStreak ?? this.maxStreak,
       guessDistribution: guessDistribution ?? this.guessDistribution,
-      lastPlayedDate: lastPlayedDate ?? this.lastPlayedDate,
-      lastWonDate: lastWonDate ?? this.lastWonDate,
     );
   }
 
@@ -53,8 +49,6 @@ class PlayerStats {
         'currentStreak': currentStreak,
         'maxStreak': maxStreak,
         'guessDistribution': guessDistribution,
-        'lastPlayedDate': lastPlayedDate,
-        'lastWonDate': lastWonDate,
       };
 
   factory PlayerStats.fromJson(Map<String, dynamic> json) {
@@ -67,8 +61,6 @@ class PlayerStats {
               ?.map((e) => e as int)
               .toList() ??
           List<int>.filled(6, 0),
-      lastPlayedDate: json['lastPlayedDate'] as String?,
-      lastWonDate: json['lastWonDate'] as String?,
     );
   }
 }
