@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'game_screen.dart';
+import 'scramble_screen.dart';
 
 /// The app's landing page. This is deliberately a fixed brand look (blue +
 /// yellow) rather than following the system light/dark theme, since it's
 /// the "cover" for Daily Puzzler as a whole rather than the game itself —
-/// the Wordle screen behind it keeps its own theming.
-///
-/// Today there's one puzzle (Wordle), so there's one button. The layout
-/// leaves room to add more puzzle buttons here later without a redesign.
+/// each game screen keeps its own theming.
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
@@ -50,7 +48,7 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'One new puzzle a day.\nCome back tomorrow for another.',
+                  'New puzzles every day.\nCome back tomorrow for more.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.85),
@@ -65,6 +63,16 @@ class WelcomeScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const GameScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                _PuzzleButton(
+                  label: 'WORD SCRAMBLE',
+                  icon: Icons.shuffle_rounded,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ScrambleScreen()),
                     );
                   },
                 ),
