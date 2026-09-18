@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../providers/game_provider.dart';
+import '../providers/word_guess_provider.dart';
 
 /// Simple settings dialog — currently just the Hard Mode toggle.
 ///
@@ -10,10 +10,12 @@ import '../providers/game_provider.dart';
 /// Wordle's hard mode. It can only be toggled before the first guess of a
 /// round is made, exactly like upstream Wordle, so it can't be flipped
 /// mid-solve to dodge a constraint. Starting a new word unlocks it again.
+///
+/// Shared by both guessing games; each keeps its own saved setting.
 class SettingsDialog extends StatelessWidget {
   const SettingsDialog({super.key, required this.provider});
 
-  final GameProvider provider;
+  final WordGuessProvider provider;
 
   @override
   Widget build(BuildContext context) {

@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 /// gets to see it. Either way the primary action is the same: deal another
 /// random word and keep playing. "Close" just dismisses to the finished
 /// board, where [RoundOverBar] still offers the same new-word action.
+///
+/// Shared by both guessing games. [clue] is the Synonym game's prompt; it's
+/// null for Wordle, which has no clue to restate.
 class RoundResultDialog extends StatelessWidget {
   const RoundResultDialog({
     super.key,
@@ -17,10 +20,12 @@ class RoundResultDialog extends StatelessWidget {
     required this.bestStreak,
     required this.onNewWord,
     required this.onViewStats,
+    this.clue,
   });
 
   final bool won;
   final String answer;
+  final String? clue;
   final int guessCount;
   final int maxGuesses;
   final int currentStreak;
@@ -44,6 +49,13 @@ class RoundResultDialog extends StatelessWidget {
           if (!won) ...[
             const SizedBox(height: 12),
             _answerChip(context),
+          ],
+          if (clue != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              won ? 'Clue: $clue' : '$answer means "$clue".',
+              style: const TextStyle(fontStyle: FontStyle.italic),
+            ),
           ],
           const SizedBox(height: 16),
           Text(

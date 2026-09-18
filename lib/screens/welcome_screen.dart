@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'game_screen.dart';
 import 'scramble_screen.dart';
+import 'synonym_screen.dart';
 
 /// The app's landing page. This is deliberately a fixed brand look (blue +
 /// yellow) rather than following the system light/dark theme, since it's
@@ -46,16 +47,6 @@ class WelcomeScreen extends StatelessWidget {
                     letterSpacing: 3,
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'New puzzles every day.\nCome back tomorrow for more.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 15,
-                    height: 1.4,
-                  ),
-                ),
                 const Spacer(flex: 4),
                 _PuzzleButton(
                   label: 'WORDLE',
@@ -63,6 +54,16 @@ class WelcomeScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const GameScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                _PuzzleButton(
+                  label: 'SYNONYM',
+                  icon: Icons.swap_horiz_rounded,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SynonymScreen()),
                     );
                   },
                 ),

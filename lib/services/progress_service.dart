@@ -13,13 +13,22 @@ import '../models/player_stats.dart';
 /// Everything is on-device only (via [SharedPreferences]) — no account or
 /// network sync. That keeps things simple and private, at the cost of not
 /// following the player across devices.
+///
+/// Each guessing game gets its own [namespace], so Wordle and Synonym keep
+/// separate streaks, stats, and saved rounds in the same storage.
 class ProgressService {
+  ProgressService({this.namespace = 'wordle'});
+
+  /// Prefix for every key this instance touches. Defaults to Wordle's, so
+  /// progress saved before the app had a second guessing game still loads.
+  final String namespace;
+
   // v2 keys: v1 stored a date-keyed "puzzle of the day" record and stats
   // with last-played/last-won dates, which no longer apply now that rounds
   // are drawn at random and replayable. Old v1 values are simply ignored.
-  static const _kStats = 'wordle.stats.v2';
-  static const _kHardMode = 'wordle.hardMode.v1';
-  static const _kCurrentGame = 'wordle.currentGame.v2';
+  String get _kStats => '$namespace.stats.v2';
+  String get _kHardMode => '$namespace.hardMode.v1';
+  String get _kCurrentGame => '$namespace.currentGame.v2';
 
   Future<PlayerStats> loadStats() async {
     final prefs = await SharedPreferences.getInstance();

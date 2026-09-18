@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'providers/game_provider.dart';
 import 'providers/scramble_provider.dart';
+import 'providers/synonym_provider.dart';
 import 'screens/welcome_screen.dart';
 
 void main() {
@@ -18,6 +19,7 @@ class DailyPuzzlerApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => GameProvider()..init()),
         ChangeNotifierProvider(create: (_) => ScrambleProvider()..init()),
+        ChangeNotifierProvider(create: (_) => SynonymProvider()..init()),
       ],
       child: MaterialApp(
         title: 'Daily Puzzler',

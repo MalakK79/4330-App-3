@@ -15,6 +15,7 @@ void main() {
 
     expect(find.textContaining('DAILY PUZZLER'), findsOneWidget);
     expect(find.text('WORDLE'), findsOneWidget);
+    expect(find.text('SYNONYM'), findsOneWidget);
   });
 
   testWidgets('Tapping Wordle opens the game screen with a streak counter',
@@ -25,6 +26,19 @@ void main() {
     await tester.tap(find.text('WORDLE'));
     await tester.pumpAndSettle();
 
+    expect(find.text('ENTER'), findsOneWidget);
+    expect(find.text('STREAK 0'), findsOneWidget);
+  });
+
+  testWidgets('Tapping Synonym opens the game screen with a clue',
+      (tester) async {
+    await tester.pumpWidget(const DailyPuzzlerApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('SYNONYM'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('FIND A WORD MEANING'), findsOneWidget);
     expect(find.text('ENTER'), findsOneWidget);
     expect(find.text('STREAK 0'), findsOneWidget);
   });

@@ -1,4 +1,4 @@
-/// Overall status of today's puzzle.
+/// Overall status of a round.
 enum GameStatus {
   playing,
   won,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/tile_status.dart';
-import '../providers/game_provider.dart';
+import '../providers/word_guess_provider.dart';
 
 const List<String> _row1 = ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'];
 const List<String> _row2 = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
@@ -10,6 +10,8 @@ const List<String> _row3 = ['Z', 'X', 'C', 'V', 'B', 'N', 'M'];
 /// The on-screen QWERTY keyboard. Keys are colored using the same
 /// correct/present/absent scheme as the grid tiles, so players can see at a
 /// glance which letters they've ruled in or out.
+///
+/// Takes any [WordGuessProvider], so both guessing games share one keyboard.
 class KeyboardWidget extends StatelessWidget {
   const KeyboardWidget({
     super.key,
@@ -19,7 +21,7 @@ class KeyboardWidget extends StatelessWidget {
     required this.onBackspace,
   });
 
-  final GameProvider provider;
+  final WordGuessProvider provider;
   final ValueChanged<String> onKey;
   final VoidCallback onEnter;
   final VoidCallback onBackspace;
